@@ -7,14 +7,14 @@
 #define AP_PASSWORD "z123456z"
 
 #define  LED  5  //D1 es GPIO5
-#define REPORT_INTERVAL 60 // in sec
+#define REPORT_INTERVAL 10 // in sec
 
 WiFiClient client;
 
 const char* server = "api.carriots.com";
 const String APIKEY = "9dccd2c601b7658bda4207f165a42f92f17d25accdf9f79121f61bc9c402fed3";   // Replace with your Carriots apikey
 const String DEVICE = "defaultDevice@jeg1966.jeg1966";  // Replace with the id_developer of your device
-int valor;
+int valor=0;
 
 
 void setup() {
@@ -23,7 +23,6 @@ void setup() {
   pinMode(A0, INPUT);
   pinMode(LED, OUTPUT);
   Serial.begin(115200);
-
 
 
 
@@ -49,9 +48,10 @@ void setup() {
 
   //primera lectura
 
-  valor = analogRead(0);
+  //valor = analogRead(0);
 
-
+  delay(1000);
+  
 }
 //*************************************************************************************
 
@@ -63,7 +63,7 @@ void loop() {
 
   Serial.println(String(valor));
 
-  if (valor > 120 )
+  if (valor > 600 )
     sendValores(valor);
 
   int cnt = REPORT_INTERVAL;
