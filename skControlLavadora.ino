@@ -1,21 +1,59 @@
 
 #include <ESP8266WiFi.h>
-
+#include <ESP8266HTTPClient.h>
 //AP definitions
 
 #define AP_SSID "Wireless-N"
 #define AP_PASSWORD "z123456z"
 
 #define  LED  5  //D1 es GPIO5
-#define REPORT_INTERVAL 10 // in sec
+#define REPORT_INTERVAL 30 // in sec
 
 WiFiClient client;
 
-const char* server = "api.carriots.com";
-const String APIKEY = "9dccd2c601b7658bda4207f165a42f92f17d25accdf9f79121f61bc9c402fed3";   // Replace with your Carriots apikey
-const String DEVICE = "defaultDevice@jeg1966.jeg1966";  // Replace with the id_developer of your device
-int valor=0;
+String writeAPIKey = "V0GX5WB22R9BWOKQ";
+const char* host = "api.thingspeak.com";
+int valor = 0;
 
+int mVperAmp = 66; // use 100 for 20A Module and 66 for 30A Module
+
+double Voltage = 0;
+double VRMS = 0;
+double AmpsRMS = 0;
+
+//******************************************************************************************************************
+float getVPP()
+{
+  float result;
+
+  int readValue;             //value read from the sensor
+  int maxValue = 0;          // store max value here
+  int minValue = 1024;          // store min value here
+
+  uint32_t start_time = millis();
+  while ((millis() - start_time) < 1000) //sample for 1 Sec
+  {
+    readValue = analogRead(0);
+    // see if you have a new maxValue
+    if (readValue > maxValue)
+    {
+      /*record the maximum sensor value*/
+      maxValue = readValue;
+    }
+    if (readValue < minValue)
+    {
+      /*record the maximum sensor value*/
+      minValue = readValue;
+    }
+  }
+
+  // Subtract min from max
+  result = ((maxValue - minValue) * 3.3) / 1024.0;
+
+  return result;
+}
+
+//*************************************************************************************************************
 
 void setup() {
   // put your setup code here, to run once:
@@ -51,7 +89,7 @@ void setup() {
   //valor = analogRead(0);
 
   delay(1000);
-  
+
 }
 //*************************************************************************************
 
@@ -63,13 +101,51 @@ void loop() {
 
   Serial.println(String(valor));
 
-  if (valor > 600 )
-    sendValores(valor);
+  Voltage = getVPP();
+  VRMS = (Voltage / 2.0) * 0.707;
+  AmpsRMS = (VRMS * 1000) / mVperAmp;
+  Serial.print(AmpsRMS);
+  Serial.println(" Amps RMS");
 
-  int cnt = REPORT_INTERVAL;
 
-  while (cnt--)
-    delay(1000);
+  if (AmpsRMS > 0.5F ) {
+    if (WiFi.status() == WL_CONNECTED) {
+
+      HTTPClient http;
+
+      String body = "field3=";
+      body +=  String(AmpsRMS);
+
+
+      Serial.println(body);
+
+      http.begin(host, 80, "https://api.thingspeak.com/update?api_key=" + writeAPIKey + "&" + body);
+
+      int httpCode = http.GET();
+
+      if (httpCode == HTTP_CODE_OK) {
+
+
+        //String payload = http.getString();
+
+        Serial.print("Resultado: ");
+        Serial.println(http.getString());
+
+        digitalWrite(LED, HIGH); //flashing led
+        delay(500);
+        digitalWrite(LED, LOW);
+
+
+      }
+
+      http.end();
+    }//WL_CONNECTED
+
+
+  }
+
+
+  delay(20000);
 
 }
 //********************************************************************************************************************************
@@ -99,8 +175,9 @@ void wifiConnect()
   Serial.println("WiFi conectado");
 }
 //**********************************************************************************************************************
-void sendValores(int Corr)
-{
+/*
+  void sendValores(int Corr)
+  {
 
 
   while (!client.connect(server, 80)) {
@@ -133,6 +210,6 @@ void sendValores(int Corr)
 
   Serial.println(json);
   Serial.println("Connection closed");
-}
-
+  }
+*/
 
